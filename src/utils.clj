@@ -3,5 +3,5 @@
 (defn now []
   (quot (System/currentTimeMillis) 1000))
 
-(defn value-vector [a-map]
+(defn get-values [a-map]
   (vec (map #(last %) (seq a-map))))
