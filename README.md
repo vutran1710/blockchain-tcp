@@ -1,16 +1,16 @@
 # blockchain-tcp
 
-FIXME: description
+Blockchain TCP Network
 
-## Installation
+## Clone
 
-Download from http://example.com/FIXME.
+http://github.com/vutran1710/blockchain-tcp.git
 
 ## Usage
 
-FIXME: explanation
-
-    $ java -jar blockchain-tcp-0.1.0-standalone.jar [args]
+```
+TO BE ANNOUNCED
+```
 
 ## Options
 
@@ -24,13 +24,9 @@ FIXME: listing of options this app accepts.
 
 ...
 
-### Any Other Sections
-### That You Think
-### Might be Useful
-
 ## License
 
-Copyright © 2018 FIXME
+Copyright © 2018 @vutr
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
