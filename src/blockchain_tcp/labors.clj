@@ -1,7 +1,9 @@
 (ns blockchain-tcp.labors
   (:require [digest :refer [sha-256]]
-            [utils :refer [get-values]]))
+            [genesis :refer :all]
+            [utils :refer [get-values now]]))
 
+;; Private
 (defn- hashing-block [block]
   (sha-256 (apply str (get-values block))))
 
@@ -13,3 +15,16 @@
   (loop [proof 0]
     (if-not (validate-proof proof last-proof)
       (recur (inc proof)) proof)))
+
+(defn- last-block [] (last @genesis/chain))
+(defn- new-index [] (inc (:index (last-block))))
+
+
+;; Public labors
+(defn mine-new-block []
+  (let [prev-hash (hashing-block (last-block))
+        proof (proof-of-work (:proof (last-block)))]
+    {:index (new-index)
+     :time (now)
+     :proof proof
+     :previous-hash prev-hash}))
