@@ -28,3 +28,10 @@
      :time (now)
      :proof proof
      :previous-hash prev-hash}))
+
+(defn validate-blocks [new-block old-block]
+  "NOTE: Hybrid Proof-of-Work/Stake Blockchain"
+  (and
+   (= (:index new-block) (inc (:index old-block)))
+   (= (:prev-hash new-block) (hashing-block old-block))
+   (validate-proof (:proof new-block) (:proof old-block))))
