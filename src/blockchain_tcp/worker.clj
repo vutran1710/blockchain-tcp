@@ -1,4 +1,4 @@
-(ns blockchain-tcp.labors
+(ns blockchain-tcp.worker
   (:require [digest :refer [sha-256]]
             [genesis :refer :all]
             [utils :refer [get-values now]]))
