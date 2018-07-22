@@ -7,7 +7,7 @@
             [manifold.deferred :as d]
             [aleph.tcp :as tcp]
             [blockchain-tcp.genesis :as bc]
-            [utils :refer [generate-port]]
+            [blockchain-tcp.utils :refer [generate-port]]
             [cheshire.core :refer [generate-string] :rename {generate-string jsonify}])
   (:gen-class))
 

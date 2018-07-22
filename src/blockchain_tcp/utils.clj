@@ -1,4 +1,4 @@
-(ns utils
+(ns blockchain-tcp.utils
   (:require [clojure.java.io :as javis]))
 
 ;; Consts
