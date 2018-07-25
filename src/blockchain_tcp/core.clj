@@ -8,13 +8,13 @@
             [aleph.tcp :as tcp]
             [blockchain-tcp.genesis :as bc]
             [blockchain-tcp.network :refer [connect-to-server]]
-            [blockchain-tcp.utils :refer [generate-port]]
+            [blockchain-tcp.utils :refer [generate-port TCP_DEFAULT_PORT]]
             [cheshire.core :refer [generate-string] :rename {generate-string jsonify}])
   (:gen-class))
 
 (def error-msg "Fuck off!\n")
 
-;; DEV ROADMAP:
+;; Tatics:
 ;; 1) Automate assignment of port everytime lein runs (auto-remove port from .port file too)
 ;; - Create a client, connect to any node in the existing network, then:
 ;; - Provide a local/stored chain, if there is
@@ -26,11 +26,11 @@
 ;; - Auto-remove port from .port when closing
 
 (defn routine-handler [s]
-  #(letfn [(resp [x] (s/put! s x) (s/close! s))]
+  #(letfn [(resp [x] (s/put! s x))]
      (let [msg (String. %)]
        (println msg)
        (cond
-         (= "CHAIN\r\n" msg) (resp (jsonify @bc/chain))
+         (= "CHAIN" msg) (resp (jsonify @bc/chain))
          :else (resp error-msg)))))
 
 (defn master-handler [s info]
@@ -40,16 +40,15 @@
   [& args]
   (let [[opts _ ban] (cli args
                           ["-p" "--port" "Port to listen to connections"
-                           :default 10200 :parse-fn #(Integer/parseInt %)]
+                           :default TCP_DEFAULT_PORT :parse-fn #(Integer/parseInt %)]
                           ["-h" "--help" "Show this help" :default false :flag true])]
     (when (:help opts)
       (println ban)
       (System/exit 0))
     (try
       (let [port (generate-port)]
-        ;; (connect-to-server 10200)
-        (tcp/start-server master-handler {:port port})
-        (println (format "Node is up on Port: %s." port)))
+        (connect-to-server port)
+        (tcp/start-server master-handler {:port port}))
       (catch Exception e
         (do (.printStackTrace e)
             (System/exit 0))))))
