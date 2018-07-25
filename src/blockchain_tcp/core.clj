@@ -26,12 +26,12 @@
 ;; - Auto-remove port from .port when closing
 
 (defn routine-handler [s]
-  #(letfn [(resp [x] (s/put! s x))]
+  #(letfn [(resp [msg x] (do (println msg) (s/put! s x)))]
      (let [msg (String. %)]
-       (println msg)
+       (println "incoming >> " "[" msg "]")
        (cond
-         (= "CHAIN" msg) (resp (jsonify @bc/chain))
-         :else (resp error-msg)))))
+         (= "CHAIN" msg) (resp "::chain-request::" (jsonify @bc/chain))
+         :else (resp "::incomprehenable::" error-msg)))))
 
 (defn master-handler [s info]
   (s/consume (routine-handler s) s))

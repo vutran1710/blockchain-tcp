@@ -6,15 +6,8 @@
             [gloss.core :as gloss]
             [gloss.io :as io]
             [blockchain-tcp.genesis :as bc]
+            [blockchain-tcp.protocol :as prc]
             [blockchain-tcp.utils :refer [generate-port TCP_DEFAULT_PORT]]))
-
-
-(def protocol
-  (gloss/compile-frame
-   (gloss/finite-frame :uint32
-                       (gloss/string :utf-8))
-   pr-str
-   edn/read-string))
 
 (defn wrap-duplex-stream [protocol s]
   (let [out (s/stream)]
@@ -27,7 +20,7 @@
 
 (defn get-client [port host]
   (d/chain (tcp/client {:host host, :port port})
-           #(wrap-duplex-stream protocol %)))
+           #(wrap-duplex-stream prc/p %)))
 
 (defn inquire-port []
   (print "What port to communicate?: ")
