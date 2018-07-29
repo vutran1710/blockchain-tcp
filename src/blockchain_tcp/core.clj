@@ -1,98 +1,54 @@
 (ns blockchain-tcp.core
-  (:use [clojure.tools.cli])
-  (:gen-class)
-  (:require [manifold.deferred :as d]
-            [manifold.stream :as s]
-            [clojure.edn :as edn]
+  (:use [gloss.core]
+        [gloss.io]
+        [clojure.java.io]
+        [clojure.tools.cli])
+  (:require [manifold.stream :as s]
+            [manifold.deferred :as d]
             [aleph.tcp :as tcp]
-            [gloss.core :as gloss]
-            [gloss.io :as io]
-            [clojure.core.async
-             :as a
-             :refer [>! <! >!! <!! go chan buffer close! thread
-                     alts! alts!! timeout]]))
+            [blockchain-tcp.genesis :as bc]
+            [blockchain-tcp.network :refer [connect-to-server]]
+            [blockchain-tcp.utils :refer [generate-port TCP_DEFAULT_PORT]]
+            [cheshire.core :refer [generate-string] :rename {generate-string jsonify}])
+  (:gen-class))
 
-;; See `two-way-handler`, `wrap-duplex-stream` and protocol is just convenient
-;; wrapper to use Clojure's EDN message format
+(def error-msg "Fuck off!\n")
 
-;; (def protocol
-;;   (gloss/compile-frame
-;;    (gloss/finite-frame :uint32
-;;                        (gloss/string :utf-8))
-;;    pr-str
-;;    edn/read-string))
+;; Tatics:
+;; 1) Automate assignment of port everytime lein runs (auto-remove port from .port file too)
+;; - Create a client, connect to any node in the existing network, then:
+;; - Provide a local/stored chain, if there is
+;; - Network resolve, return the valid chain
+;; - Update to the latest chain
+;; - Update the latest network-node
+;; - Enter stake
+;; - Mine, if desired
+;; - Auto-remove port from .port when closing
 
-;; (defn wrap-duplex-stream
-;;   [protocol s]
-;;   (let [out (s/stream)]
-;;     (s/connect
-;;      (s/map #(io/encode protocol %) out)
-;;      s)
-;;     (s/splice
-;;      out
-;;      (io/decode-stream s protocol))))
+(defn routine-handler [s]
+  #(letfn [(resp [msg x] (do (println msg) (s/put! s x)))]
+     (let [msg (String. %)]
+       (println "incoming >> " "[" msg "]")
+       (cond
+         (= "CHAIN" msg) (resp "::chain-request::" (jsonify @bc/chain))
+         :else (resp "::incomprehenable::" error-msg)))))
 
-;; (defn client
-;;   [host port]
-;;   (d/chain (tcp/client {:host host, :port port})
-;;            #(wrap-duplex-stream protocol %)))
-
-(defn -decode [bs]
-  "Receive []bytes, we can use any message format we want, some popular formats are:
-   - single line
-   - multiple-line-based, i.e: HTTP
-   - s-expressions
-   - json
-   - message-pack
-   - and of course, edn
-  "
-  (String. bs))
-
-(defn -encode [msg]
-  "Reverse of `-decode`"
-  (.getBytes msg))
-
-(defn one-way-handler [s info]
-  (println "--> new connection" info)
-  (s/connect (s/map (comp println -decode) s) s))
-
-(defn one-way-handler2 [s info]
-  (println "--> new connection" info)
-  ;; (s/consume (comp println -decode) s))
-  (s/consume #(println (-decode %)) s))
-
-(defn two-way-handler [s info]
-  (println "--> new connection" info)
-  (s/consume (fn [bs]
-               (println (-decode bs))
-               @(s/put! s (-encode (.concat "Reply: " (-decode bs)))))
-             s))
-
-(defn start-server
-  [handler port]
-  (tcp/start-server
-   ;; handler = (fn [stream info])
-   ;; we only need this if we use `wrap-duplex-stream` and/or protocol decoder
-   ;; (fn [s info] (handler s info))
-   handler
-   {:port port}))
+(defn master-handler [s info]
+  (s/consume (routine-handler s) s))
 
 (defn -main
   [& args]
   (let [[opts _ ban] (cli args
                           ["-p" "--port" "Port to listen to connections"
-                           :default 10000 :parse-fn #(Integer/parseInt %)]
+                           :default TCP_DEFAULT_PORT :parse-fn #(Integer/parseInt %)]
                           ["-h" "--help" "Show this help" :default false :flag true])]
     (when (:help opts)
-      (do
-        (println ban)
-        (System/exit 0)))
+      (println ban)
+      (System/exit 0))
     (try
-      (do
-        (println "Run on port: " (:port opts))
-        ;; (start-server one-way-handler (:port opts))
-        ;; (start-server one-way-handler2 (:port opts))
-        (start-server two-way-handler (:port opts))
-        )
+      (let [port (generate-port)]
+        (connect-to-server port)
+        (tcp/start-server master-handler {:port port}))
       (catch Exception e
-        (do (.printStackTrace e) (System/exit 0))))))
+        (do (.printStackTrace e)
+            (System/exit 0))))))
